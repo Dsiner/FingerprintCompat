@@ -1,2 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.d.lib.fingerprintcompat" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.d.lib.fingerprintcompat">
+
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+</manifest>
