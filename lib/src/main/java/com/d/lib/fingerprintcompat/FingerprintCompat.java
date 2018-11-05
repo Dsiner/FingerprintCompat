@@ -1,271 +1,204 @@
 package com.d.lib.fingerprintcompat;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.Context;
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
-import android.os.CancellationSignal;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyPermanentlyInvalidatedException;
-import android.security.keystore.KeyProperties;
-import android.util.Base64;
-import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
+import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import com.d.lib.fingerprintcompat.base.FingerprintException;
+import com.d.lib.fingerprintcompat.base.IFingerprint;
+import com.d.lib.fingerprintcompat.base.Mode;
+import com.d.lib.fingerprintcompat.callback.CancellableAuthenticationCallback;
+import com.d.lib.fingerprintcompat.callback.SimpleAuthenticationCallback;
+import com.d.lib.fingerprintcompat.callback.WrapAuthenticationCallback;
+import com.d.lib.fingerprintcompat.crypto.AsyncCryptoFactory;
+import com.d.lib.fingerprintcompat.crypto.Crypto;
+import com.d.lib.fingerprintcompat.crypto.CryptoFactory;
 
 /**
  * FingerprintCompat
  * Created by D on 2018/11/2.
  **/
-@TargetApi(Build.VERSION_CODES.M)
-public class FingerprintCompat {
+public class FingerprintCompat implements IFingerprint {
+    public final static String TAG = "FingerprintCompat";
+    private static boolean DEBUG = true;
+
+    private static final String KEY_AUTH_MODE = "<FingerprintCompat authentication mode>";
+
+    private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+
     private Context mContext;
-    private KeyStore mKeyStore;
-    private KeyGenerator mKeyGenerator;
-    private Cipher mCipher;
-
-    private FingerprintManager mFingerprintManager;
-    private CancellationSignal mCancellationSignal;
-    private boolean mSelfCancelled;
-
-    private String mKeyName = "key";
+    private FingerprintManagerCompat mFingerprintManagerCompat;
+    private AsyncCryptoFactory mAsyncCryptoFactory;
+    private Crypto mCrypto;
+    private AsyncCryptoFactory.Callback mAsyncCryptoFactoryCallback;
+    private CancellableAuthenticationCallback mCancellableAuthenticationCallback;
 
     public static FingerprintCompat create(Context context) {
-        FingerprintCompat fingerprintCompat = new FingerprintCompat(context);
-        return fingerprintCompat;
+        return new Builder(context).build();
     }
 
-    private FingerprintCompat(Context context) {
+    FingerprintCompat(Context context) {
         this.mContext = context;
-        this.mFingerprintManager = context.getSystemService(FingerprintManager.class);
-        init(context);
     }
 
-    private void init(Context context) {
-        try {
-            mKeyStore = KeyStore.getInstance("AndroidKeyStore");
-        } catch (KeyStoreException e) {
-            throw new RuntimeException("Failed to get an instance of KeyStore", e);
+    FingerprintCompat(Context context, AsyncCryptoFactory asyncCryptoFactory, Crypto crypto) {
+        this.mContext = context;
+        this.mAsyncCryptoFactory = asyncCryptoFactory;
+        this.mCrypto = crypto;
+        this.mFingerprintManagerCompat = FingerprintManagerCompat.from(context);
+    }
+
+    @Override
+    public boolean isHardwareDetected() {
+        return isHardwareDetected(mContext);
+    }
+
+    @Override
+    public boolean hasEnrolledFingerprints() {
+        return hasEnrolledFingerprints(mContext);
+    }
+
+    public void authenticate(final FingerprintManagerCompat.AuthenticationCallback callback) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
         }
-        try {
-            mKeyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,
-                    "AndroidKeyStore");
-        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-            throw new RuntimeException("Failed to get an instance of KeyGenerator", e);
+        cancel();
+        FingerprintCompat.d("Creating CryptoObject");
+        mAsyncCryptoFactoryCallback = new AsyncCryptoFactory.Callback() {
+            @SuppressLint("NewApi")
+            @Override
+            public void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject) {
+                if (cryptoObject != null) {
+                    FingerprintCompat.d("Starting authentication [keyName= " + KEY_AUTH_MODE + "]; value= [" + "" + "]");
+                    mCancellableAuthenticationCallback = new WrapAuthenticationCallback(Mode.AUTHENTICATION,
+                            mCrypto, "", callback);
+                    mFingerprintManagerCompat.authenticate(cryptoObject,
+                            0,
+                            mCancellableAuthenticationCallback.getCancellationSignal(),
+                            mCancellableAuthenticationCallback,
+                            mMainHandler);
+                } else {
+                    if (callback != null) {
+                        callback.onAuthenticationError(-1, "Fingerprint did not start due to initialization failure, " +
+                                "probably because of android.security.keystore.KeyPermanentlyInvalidatedException");
+                    }
+                }
+            }
+        };
+        mAsyncCryptoFactory.createCryptoObject(Mode.AUTHENTICATION, KEY_AUTH_MODE, mAsyncCryptoFactoryCallback);
+    }
+
+    @Override
+    public void authenticate(Callback callback) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
+        startFingerprintAuthentication(Mode.AUTHENTICATION, KEY_AUTH_MODE, "", callback);
+    }
+
+    @Override
+    public void decrypt(String keyName, String value, Callback callback) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
+        startFingerprintAuthentication(Mode.DECRYPTION, keyName, value, callback);
+    }
+
+    @Override
+    public void encrypt(String keyName, String value, Callback callback) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
+        startFingerprintAuthentication(Mode.ENCRYPTION, keyName, value, callback);
+    }
+
+    @Override
+    public void cancel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
+        if (mCancellableAuthenticationCallback != null) {
+            mCancellableAuthenticationCallback.cancel();
+            mCancellableAuthenticationCallback = null;
+        }
+        if (mAsyncCryptoFactoryCallback != null) {
+            mAsyncCryptoFactoryCallback.cancel();
+            mAsyncCryptoFactoryCallback = null;
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void startFingerprintAuthentication(final Mode mode,
+                                                final String keyName, final String value,
+                                                @Nullable final Callback callback) {
+        cancel();
+        FingerprintCompat.d("Creating CryptoObject");
+        mAsyncCryptoFactoryCallback = new AsyncCryptoFactory.Callback() {
+            @Override
+            public void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject) {
+                if (cryptoObject != null) {
+                    fingerprintAuthenticationImp(mode, cryptoObject, keyName, value, callback);
+                } else {
+                    if (callback != null) {
+                        callback.onError(new FingerprintException(-1, "Fingerprint did not start due to initialization failure, " +
+                                "probably because of android.security.keystore.KeyPermanentlyInvalidatedException"));
+                    }
+                }
+            }
+        };
+        mAsyncCryptoFactory.createCryptoObject(mode, keyName, mAsyncCryptoFactoryCallback);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void fingerprintAuthenticationImp(Mode mode,
+                                              @Nullable FingerprintManagerCompat.CryptoObject cryptoObject,
+                                              String keyName, String value,
+                                              @Nullable Callback callback) {
+        FingerprintCompat.d("Starting authentication [keyName= " + keyName + "]; value= [" + value + "]");
+        if (callback != null) {
+            callback.onReady();
+        }
+        mCancellableAuthenticationCallback = new SimpleAuthenticationCallback(mode,
+                mCrypto, value, callback);
+        mFingerprintManagerCompat.authenticate(cryptoObject,
+                0,
+                mCancellableAuthenticationCallback.getCancellationSignal(),
+                mCancellableAuthenticationCallback,
+                mMainHandler);
+    }
+
+    public static boolean enable(Context context) {
+        if (!isHardwareDetected(context)) {
+            Toast.makeText(context.getApplicationContext(),
+                    "Fingerprint hardware is not present and functional",
+                    Toast.LENGTH_SHORT).show();
+            return false;
         }
 
-        try {
-            mCipher = Cipher.getInstance(KeyProperties.KEY_ALGORITHM_AES + "/"
-                    + KeyProperties.BLOCK_MODE_CBC + "/"
-                    + KeyProperties.ENCRYPTION_PADDING_PKCS7);
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-            throw new RuntimeException("Failed to get an instance of Cipher", e);
-        }
-
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        } else {
-            // Hide the purchase button which uses a non-invalidated key
-            // if the app doesn't work on Android N preview
-        }
-
-        if (!isKeyguardSecure(mContext)) {
+        if (!isKeyguardSecure(context)) {
             // Show a message that the user hasn't set up a fingerprint or lock screen.
-            Toast.makeText(mContext.getApplicationContext(),
+            Toast.makeText(context.getApplicationContext(),
                     "Secure lock screen hasn't set up.\n"
                             + "Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint",
                     Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
 
-        if (!hasEnrolledFingerprints(mContext)) {
+        if (!hasEnrolledFingerprints(context)) {
             // This happens when no fingerprints are registered.
-            Toast.makeText(mContext.getApplicationContext(),
+            Toast.makeText(context.getApplicationContext(),
                     "Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint",
                     Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        createKey(mKeyStore, mKeyGenerator, mKeyName, true);
-        checkKey();
-    }
-
-    /**
-     * Creates a symmetric key in the Android Key Store which can only be used after the user has
-     * authenticated with fingerprint.
-     *
-     * @param keyName                          the name of the key to be created
-     * @param invalidatedByBiometricEnrollment if {@code false} is passed, the created key will not
-     *                                         be invalidated even if a new fingerprint is enrolled.
-     *                                         The default value is {@code true}, so passing
-     *                                         {@code true} doesn't change the behavior
-     *                                         (the key will be invalidated if a new fingerprint is
-     *                                         enrolled.). Note that this parameter is only valid if
-     *                                         the app works on Android N developer preview.
-     */
-    public void createKey(KeyStore keyStore, KeyGenerator keyGenerator, String keyName, boolean invalidatedByBiometricEnrollment) {
-        // The enrolling flow for fingerprint. This is where you ask the user to set up fingerprint
-        // for your flow. Use of keys is necessary if you need to know if the set of
-        // enrolled fingerprints has changed.
-        try {
-            keyStore.load(null);
-            // Set the alias of the entry in Android KeyStore where the key will appear
-            // and the constrains (purposes) in the constructor of the Builder
-
-            KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(keyName,
-                    KeyProperties.PURPOSE_ENCRYPT |
-                            KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                    // Require the user to authenticate with a fingerprint to authorize every use
-                    // of the key
-                    .setUserAuthenticationRequired(true)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7);
-
-            // This is a workaround to avoid crashes on devices whose API level is < 24
-            // because KeyGenParameterSpec.Builder#setInvalidatedByBiometricEnrollment is only
-            // visible on API level +24.
-            // Ideally there should be a compat library for KeyGenParameterSpec.Builder but
-            // which isn't available yet.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                builder.setInvalidatedByBiometricEnrollment(invalidatedByBiometricEnrollment);
-            }
-            keyGenerator.init(builder.build());
-            keyGenerator.generateKey();
-        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException
-                | CertificateException | IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Initialize the {@link Cipher} instance with the created key in the
-     * {@link #createKey(KeyStore, KeyGenerator, String, boolean)} method.
-     *
-     * @param keyName the key name to init the cipher
-     * @return {@code true} if initialization is successful, {@code false} if the lock screen has
-     * been disabled or reset after the key was generated, or if a fingerprint got enrolled after
-     * the key was generated.
-     */
-    private boolean initCipher(KeyStore keyStore, Cipher cipher, String keyName) {
-        try {
-            keyStore.load(null);
-            SecretKey key = (SecretKey) keyStore.getKey(keyName, null);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            return true;
-        } catch (KeyPermanentlyInvalidatedException e) {
-            return false;
-        } catch (KeyStoreException | CertificateException | UnrecoverableKeyException | IOException
-                | NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new RuntimeException("Failed to init Cipher", e);
-        }
-    }
-
-    public boolean checkKey() {
-        // Set up the crypto object for later. The object will be authenticated by use
-        // of the fingerprint.
-        if (initCipher(mKeyStore, mCipher, mKeyName)) {
-            // Show the fingerprint dialog. The user has the option to use the fingerprint with
-            // crypto, or you can fall back to using a server-side verified password.
-            return true;
-        } else {
-            // This happens if the lock screen has been disabled or or a fingerprint got
-            // enrolled. Thus show the dialog to authenticate with their password first
-            // and ask the user if they want to authenticate with fingerprints in the
-            // future
             return false;
         }
-    }
-
-
-    public void startListening(final FingerprintManager.AuthenticationCallback callback) {
-        if (!isFingerprintAuthAvailable(mContext)) {
-            return;
-        }
-        FingerprintManager.CryptoObject cryptoObject = new FingerprintManager.CryptoObject(mCipher);
-        mCancellationSignal = new CancellationSignal();
-        mSelfCancelled = false;
-        // The line below prevents the false positive inspection from Android Studio
-        // noinspection ResourceType
-        mFingerprintManager.authenticate(cryptoObject, mCancellationSignal, 0 /* flags */,
-                new FingerprintManager.AuthenticationCallback() {
-                    @Override
-                    public void onAuthenticationError(int errorCode, CharSequence errString) {
-                        super.onAuthenticationError(errorCode, errString);
-                        if (mSelfCancelled) {
-                            return;
-                        }
-                        if (callback != null) {
-                            callback.onAuthenticationError(errorCode, errString);
-                        }
-                    }
-
-                    @Override
-                    public void onAuthenticationHelp(int helpCode, CharSequence helpString) {
-                        super.onAuthenticationHelp(helpCode, helpString);
-                        if (callback != null) {
-                            callback.onAuthenticationHelp(helpCode, helpString);
-                        }
-                    }
-
-                    @Override
-                    public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
-                        super.onAuthenticationSucceeded(result);
-                        if (callback != null) {
-                            callback.onAuthenticationSucceeded(result);
-                        }
-                    }
-
-                    @Override
-                    public void onAuthenticationFailed() {
-                        super.onAuthenticationFailed();
-                        if (callback != null) {
-                            callback.onAuthenticationFailed();
-                        }
-                    }
-                }, null);
-    }
-
-    public void stopListening() {
-        if (mCancellationSignal != null) {
-            mSelfCancelled = true;
-            mCancellationSignal.cancel();
-            mCancellationSignal = null;
-        }
-    }
-
-    /**
-     * Tries to encrypt some data with the generated key in {@link #createKey} which is
-     * only works if the user has just authenticated via fingerprint.
-     */
-    private byte[] tryEncrypt(Cipher cipher, String input) {
-        try {
-            return cipher.doFinal(input.getBytes());
-        } catch (BadPaddingException | IllegalBlockSizeException e) {
-            e.printStackTrace();
-            Log.e("FingerprintCompat", "Failed to encrypt the data with the generated key." + e.getMessage());
-        }
-        return null;
-    }
-
-    private String decrypt(byte[] encrypted) {
-        return Base64.encodeToString(encrypted, 0 /* flags */);
+        return true;
     }
 
     /**
@@ -274,9 +207,19 @@ public class FingerprintCompat {
      * Secure lock screen hasn't set up. Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint
      */
     public static boolean isKeyguardSecure(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
         KeyguardManager keyguardManager = context.getSystemService(KeyguardManager.class);
         return keyguardManager != null
                 && keyguardManager.isKeyguardSecure();
+    }
+
+    public static boolean isHardwareDetected(Context context) {
+        // The line below prevents the false positive inspection from Android Studio
+        // noinspection ResourceType
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected();
     }
 
     /**
@@ -290,17 +233,72 @@ public class FingerprintCompat {
      * Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint.
      */
     public static boolean hasEnrolledFingerprints(Context context) {
-        FingerprintManager fingerprintManager = context.getSystemService(FingerprintManager.class);
-        return fingerprintManager != null
-                && fingerprintManager.hasEnrolledFingerprints();
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.hasEnrolledFingerprints();
     }
 
     public static boolean isFingerprintAuthAvailable(Context context) {
         // The line below prevents the false positive inspection from Android Studio
         // noinspection ResourceType
-        FingerprintManager fingerprintManager = context.getSystemService(FingerprintManager.class);
-        return fingerprintManager != null
-                && fingerprintManager.isHardwareDetected()
-                && fingerprintManager.hasEnrolledFingerprints();
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected()
+                && fingerprintManagerCompat.hasEnrolledFingerprints();
+    }
+
+    public static void d(String message) {
+
+    }
+
+    public static void e(String message) {
+
+    }
+
+    /**
+     * Become Bob the builder.
+     */
+    public static class Builder {
+        private final Context context;
+        private Crypto crypto;
+        private CryptoFactory cryptoFactory;
+
+        Builder(Context context) {
+            this.context = context;
+        }
+
+        public Builder setCrypto(Crypto crypto) {
+            this.crypto = crypto;
+            return this;
+        }
+
+        public Builder setCryptoFactory(CryptoFactory cryptoFactory) {
+            this.cryptoFactory = cryptoFactory;
+            return this;
+        }
+
+        public Builder setDebug(boolean debug) {
+            FingerprintCompat.setDebug(debug);
+            return this;
+        }
+
+        @RequiresApi(Build.VERSION_CODES.M)
+        private FingerprintCompat buildMarshmallowInstance() {
+            Crypto finalCrypto = crypto != null ? crypto : new Crypto.Default();
+            CryptoFactory finalCryptoFactory =
+                    cryptoFactory != null ? cryptoFactory : new CryptoFactory.Default(context);
+            AsyncCryptoFactory asyncCryptoFactory = new AsyncCryptoFactory(finalCryptoFactory);
+            return new FingerprintCompat(context, asyncCryptoFactory, finalCrypto);
+        }
+
+        public FingerprintCompat build() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                return buildMarshmallowInstance();
+            } else {
+                return new FingerprintCompat(context);
+            }
+        }
+    }
+
+    private static void setDebug(boolean debug) {
+        DEBUG = debug;
     }
 }

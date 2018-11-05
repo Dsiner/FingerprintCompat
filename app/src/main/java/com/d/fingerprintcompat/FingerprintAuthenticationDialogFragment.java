@@ -3,9 +3,9 @@ package com.d.fingerprintcompat;
 import android.annotation.TargetApi;
 import android.app.DialogFragment;
 import android.content.Context;
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +15,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.d.lib.fingerprintcompat.FingerprintCompat;
+import com.d.lib.fingerprintcompat.base.FingerprintException;
+import com.d.lib.fingerprintcompat.base.IFingerprint;
 
 /**
  * A dialog which uses fingerprint APIs to authenticate the user.
@@ -66,25 +68,15 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
     public void onResume() {
         super.onResume();
         mIcon.setImageResource(R.drawable.ic_fingerprint);
-        mFingerprintCompat.startListening(new FingerprintManager.AuthenticationCallback() {
+        mFingerprintCompat.authenticate(new IFingerprint.Callback() {
             @Override
-            public void onAuthenticationError(int errorCode, CharSequence errString) {
-                showError(errString);
-            }
-
-            @Override
-            public void onAuthenticationHelp(int helpCode, CharSequence helpString) {
-                showError(helpString);
-            }
-
-            @Override
-            public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
+            public void onSuccess(String value) {
                 showSuccess();
             }
 
             @Override
-            public void onAuthenticationFailed() {
-                showError(mContext.getResources().getString(R.string.fingerprint_not_recognized));
+            public void onError(@NonNull FingerprintException e) {
+                showError(e.desc);
             }
         });
     }
@@ -92,7 +84,7 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
     @Override
     public void onPause() {
         super.onPause();
-        mFingerprintCompat.stopListening();
+        mFingerprintCompat.cancel();
     }
 
     private void showSuccess() {
