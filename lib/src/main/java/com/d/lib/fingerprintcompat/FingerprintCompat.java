@@ -216,6 +216,9 @@ public class FingerprintCompat implements IFingerprint {
     }
 
     public static boolean isHardwareDetected(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
         // The line below prevents the false positive inspection from Android Studio
         // noinspection ResourceType
         FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
@@ -233,16 +236,23 @@ public class FingerprintCompat implements IFingerprint {
      * Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint.
      */
     public static boolean hasEnrolledFingerprints(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
         FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
         return fingerprintManagerCompat.hasEnrolledFingerprints();
     }
 
     public static boolean isFingerprintAuthAvailable(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
         // The line below prevents the false positive inspection from Android Studio
         // noinspection ResourceType
         FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
         return fingerprintManagerCompat.isHardwareDetected()
-                && fingerprintManagerCompat.hasEnrolledFingerprints();
+                && fingerprintManagerCompat.hasEnrolledFingerprints()
+                && isKeyguardSecure(context);
     }
 
     public static void d(String message) {
