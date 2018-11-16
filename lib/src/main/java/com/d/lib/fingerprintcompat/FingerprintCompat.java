@@ -9,6 +9,7 @@ import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.d.lib.fingerprintcompat.base.FingerprintException;
@@ -256,11 +257,21 @@ public class FingerprintCompat implements IFingerprint {
     }
 
     public static void d(String message) {
-
+        if (!DEBUG) {
+            return;
+        }
+        Log.d(TAG, message);
     }
 
     public static void e(String message) {
+        if (!DEBUG) {
+            return;
+        }
+        Log.e(TAG, message);
+    }
 
+    private static void setDebug(boolean debug) {
+        DEBUG = debug;
     }
 
     /**
@@ -306,9 +317,5 @@ public class FingerprintCompat implements IFingerprint {
                 return new FingerprintCompat(context);
             }
         }
-    }
-
-    private static void setDebug(boolean debug) {
-        DEBUG = debug;
     }
 }

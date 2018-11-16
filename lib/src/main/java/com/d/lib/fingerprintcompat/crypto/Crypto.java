@@ -5,11 +5,12 @@ import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.util.Base64;
 
 import com.d.lib.fingerprintcompat.FingerprintCompat;
+import com.d.lib.fingerprintcompat.base.IFingerprint;
 
 /**
  * Interface implements crypto operations on given value when using
- * {@link Goldfinger#decrypt(String, String, Goldfinger.Callback)} or
- * {@link Goldfinger#encrypt(String, String, Goldfinger.Callback)} methods.
+ * {@link FingerprintCompat#decrypt(String, String, IFingerprint.Callback)} or
+ * {@link FingerprintCompat#encrypt(String, String, IFingerprint.Callback)} methods.
  */
 public interface Crypto {
 
