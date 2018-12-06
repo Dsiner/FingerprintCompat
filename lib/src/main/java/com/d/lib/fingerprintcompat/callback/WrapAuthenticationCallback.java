@@ -1,18 +1,18 @@
 package com.d.lib.fingerprintcompat.callback;
 
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 
 import com.d.lib.fingerprintcompat.FingerprintCompat;
+import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.Mode;
 import com.d.lib.fingerprintcompat.crypto.Crypto;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
-public class WrapAuthenticationCallback extends CancellableAuthenticationCallback<FingerprintManager.AuthenticationCallback> {
+public class WrapAuthenticationCallback extends CancellableAuthenticationCallback<FingerprintManagerCompat.AuthenticationCallback> {
 
-    public WrapAuthenticationCallback(Mode mode, Crypto crypto, String value, @Nullable FingerprintManager.AuthenticationCallback callback) {
+    public WrapAuthenticationCallback(Mode mode, Crypto crypto, String value, @Nullable FingerprintManagerCompat.AuthenticationCallback callback) {
         super(mode, crypto, value, callback);
     }
 
@@ -37,7 +37,7 @@ public class WrapAuthenticationCallback extends CancellableAuthenticationCallbac
     }
 
     @Override
-    public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
+    public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
         if (mCancellationSignal.isCanceled()) {
             return;
         }

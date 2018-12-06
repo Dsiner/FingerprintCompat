@@ -1,10 +1,10 @@
 package com.d.lib.fingerprintcompat.crypto;
 
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 
+import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.Mode;
 
 class CryptoObjectInitRunnable implements Runnable {
@@ -25,7 +25,7 @@ class CryptoObjectInitRunnable implements Runnable {
 
     @Override
     public void run() {
-        final FingerprintManager.CryptoObject cryptoObject;
+        final FingerprintManagerCompat.CryptoObject cryptoObject;
         switch (mMode) {
             case AUTHENTICATION:
                 cryptoObject = mCryptoFactory.createAuthenticationCryptoObject(mKeyName);

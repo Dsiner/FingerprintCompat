@@ -2,16 +2,17 @@ package com.d.lib.fingerprintcompat.callback;
 
 import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
-import android.os.CancellationSignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.support.v4.os.CancellationSignal;
 
+import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.Mode;
 import com.d.lib.fingerprintcompat.crypto.Crypto;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
-public class CancellableAuthenticationCallback<T> extends FingerprintManager.AuthenticationCallback {
+public class CancellableAuthenticationCallback<T> extends FingerprintManagerCompat.AuthenticationCallback {
     protected final Mode mMode;
     protected final Crypto mCrypto;
     protected final String mValue;

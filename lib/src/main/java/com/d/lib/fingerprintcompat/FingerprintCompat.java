@@ -3,17 +3,16 @@ package com.d.lib.fingerprintcompat;
 import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.Context;
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.d.lib.fingerprintcompat.base.FingerprintException;
+import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.IFingerprint;
 import com.d.lib.fingerprintcompat.base.Mode;
 import com.d.lib.fingerprintcompat.callback.CancellableAuthenticationCallback;
@@ -36,7 +35,7 @@ public class FingerprintCompat implements IFingerprint {
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
 
     private Context mContext;
-    private FingerprintManager mFingerprintManager;
+    private FingerprintManagerCompat mFingerprintManagerCompat;
     private AsyncCryptoFactory mAsyncCryptoFactory;
     private Crypto mCrypto;
     private AsyncCryptoFactory.Callback mAsyncCryptoFactoryCallback;
@@ -54,7 +53,7 @@ public class FingerprintCompat implements IFingerprint {
         this.mContext = context;
         this.mAsyncCryptoFactory = asyncCryptoFactory;
         this.mCrypto = crypto;
-        this.mFingerprintManager = getFingerprintManagerOrNull(context);
+        this.mFingerprintManagerCompat = FingerprintManagerCompat.from(context);
     }
 
     @Override
@@ -67,7 +66,7 @@ public class FingerprintCompat implements IFingerprint {
         return hasEnrolledFingerprints(mContext);
     }
 
-    public void authenticate(final FingerprintManager.AuthenticationCallback callback) {
+    public void authenticate(final FingerprintManagerCompat.AuthenticationCallback callback) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return;
         }
@@ -76,14 +75,14 @@ public class FingerprintCompat implements IFingerprint {
         mAsyncCryptoFactoryCallback = new AsyncCryptoFactory.Callback() {
             @SuppressLint("NewApi")
             @Override
-            public void onCryptoObjectCreated(@Nullable FingerprintManager.CryptoObject cryptoObject) {
+            public void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject) {
                 if (cryptoObject != null) {
                     FingerprintCompat.d("Starting authentication [keyName= " + KEY_AUTH_MODE + "]; value= [" + "" + "]");
                     mCancellableAuthenticationCallback = new WrapAuthenticationCallback(Mode.AUTHENTICATION,
                             mCrypto, "", callback);
-                    mFingerprintManager.authenticate(cryptoObject,
-                            mCancellableAuthenticationCallback.getCancellationSignal(),
+                    mFingerprintManagerCompat.authenticate(cryptoObject,
                             0,
+                            mCancellableAuthenticationCallback.getCancellationSignal(),
                             mCancellableAuthenticationCallback,
                             mMainHandler);
                 } else {
@@ -144,7 +143,7 @@ public class FingerprintCompat implements IFingerprint {
         FingerprintCompat.d("Creating CryptoObject");
         mAsyncCryptoFactoryCallback = new AsyncCryptoFactory.Callback() {
             @Override
-            public void onCryptoObjectCreated(@Nullable FingerprintManager.CryptoObject cryptoObject) {
+            public void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject) {
                 if (cryptoObject != null) {
                     fingerprintAuthenticationImp(mode, cryptoObject, keyName, value, callback);
                 } else {
@@ -160,7 +159,7 @@ public class FingerprintCompat implements IFingerprint {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void fingerprintAuthenticationImp(Mode mode,
-                                              @Nullable FingerprintManager.CryptoObject cryptoObject,
+                                              @Nullable FingerprintManagerCompat.CryptoObject cryptoObject,
                                               String keyName, String value,
                                               @Nullable Callback callback) {
         FingerprintCompat.d("Starting authentication [keyName= " + keyName + "]; value= [" + value + "]");
@@ -169,9 +168,9 @@ public class FingerprintCompat implements IFingerprint {
         }
         mCancellableAuthenticationCallback = new SimpleAuthenticationCallback(mode,
                 mCrypto, value, callback);
-        mFingerprintManager.authenticate(cryptoObject,
-                mCancellableAuthenticationCallback.getCancellationSignal(),
+        mFingerprintManagerCompat.authenticate(cryptoObject,
                 0,
+                mCancellableAuthenticationCallback.getCancellationSignal(),
                 mCancellableAuthenticationCallback,
                 mMainHandler);
     }
@@ -223,8 +222,8 @@ public class FingerprintCompat implements IFingerprint {
         }
         // The line below prevents the false positive inspection from Android Studio
         // noinspection ResourceType
-        FingerprintManager fingerprintManager = getFingerprintManagerOrNull(context);
-        return fingerprintManager != null && fingerprintManager.isHardwareDetected();
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected();
     }
 
     /**
@@ -241,8 +240,8 @@ public class FingerprintCompat implements IFingerprint {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return false;
         }
-        FingerprintManager fingerprintManager = getFingerprintManagerOrNull(context);
-        return fingerprintManager != null && fingerprintManager.hasEnrolledFingerprints();
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.hasEnrolledFingerprints();
     }
 
     public static boolean isFingerprintAuthAvailable(Context context) {
@@ -251,22 +250,10 @@ public class FingerprintCompat implements IFingerprint {
         }
         // The line below prevents the false positive inspection from Android Studio
         // noinspection ResourceType
-        FingerprintManager fingerprintManager = getFingerprintManagerOrNull(context);
-        return fingerprintManager != null
-                && fingerprintManager.isHardwareDetected()
-                && fingerprintManager.hasEnrolledFingerprints()
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected()
+                && fingerprintManagerCompat.hasEnrolledFingerprints()
                 && isKeyguardSecure(context);
-    }
-
-    @Nullable
-    private static FingerprintManager getFingerprintManagerOrNull(@NonNull Context context) {
-        try {
-            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ?
-                    (FingerprintManager) context.getSystemService(FingerprintManager.class) : null;
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     public static void d(String message) {

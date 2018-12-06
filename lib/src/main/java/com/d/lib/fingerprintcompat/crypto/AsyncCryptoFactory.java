@@ -1,9 +1,9 @@
 package com.d.lib.fingerprintcompat.crypto;
 
-import android.hardware.fingerprint.FingerprintManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.Mode;
 
 import java.util.concurrent.ExecutorService;
@@ -31,7 +31,7 @@ public class AsyncCryptoFactory {
 
     public static abstract class Callback {
 
-        public abstract void onCryptoObjectCreated(@Nullable FingerprintManager.CryptoObject cryptoObject);
+        public abstract void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject);
 
         private boolean canceled = false;
 
