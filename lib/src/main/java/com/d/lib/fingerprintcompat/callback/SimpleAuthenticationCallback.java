@@ -1,9 +1,9 @@
 package com.d.lib.fingerprintcompat.callback;
 
+import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
-import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 
 import com.d.lib.fingerprintcompat.FingerprintCompat;
 import com.d.lib.fingerprintcompat.base.FingerprintException;
@@ -36,7 +36,7 @@ public class SimpleAuthenticationCallback extends CancellableAuthenticationCallb
     }
 
     @Override
-    public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
+    public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
         if (mCancellationSignal.isCanceled()) {
             return;
         }
@@ -57,7 +57,7 @@ public class SimpleAuthenticationCallback extends CancellableAuthenticationCallb
         }
     }
 
-    private void cipherValue(FingerprintManagerCompat.CryptoObject cryptoObject, String value) {
+    private void cipherValue(FingerprintManager.CryptoObject cryptoObject, String value) {
         String cipheredValue = null;
         switch (mMode) {
             case DECRYPTION:

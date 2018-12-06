@@ -60,7 +60,7 @@ public interface IFingerprint {
     abstract class Callback {
 
         /**
-         * Callback is dispatched after {@link android.support.v4.hardware.fingerprint.FingerprintManagerCompat.CryptoObject} is
+         * Callback is dispatched after {@link android.hardware.fingerprint.FingerprintManager.CryptoObject} is
          * initialized and just before Fingerprint authentication is started.
          * <p>
          * Example - You want to display Dialog only if initialization is successful.

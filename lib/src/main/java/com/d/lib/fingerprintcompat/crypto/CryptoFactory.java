@@ -2,12 +2,12 @@ package com.d.lib.fingerprintcompat.crypto;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
-import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.util.Base64;
 
 import com.d.lib.fingerprintcompat.FingerprintCompat;
@@ -22,7 +22,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.spec.IvParameterSpec;
 
 /**
- * Interface used for {@link android.support.v4.hardware.fingerprint.FingerprintManagerCompat.CryptoObject}
+ * Interface used for {@link android.hardware.fingerprint.FingerprintManager.CryptoObject}
  * creation. Has separate method for {@link IFingerprint#authenticate(IFingerprint.Callback)},
  * {@link IFingerprint#decrypt(String, String, IFingerprint.Callback)} and
  * {@link IFingerprint#encrypt(String, String, IFingerprint.Callback)}
@@ -33,19 +33,19 @@ public interface CryptoFactory {
      * Create CryptoObject for authentication call. Return null if invalid.
      */
     @Nullable
-    FingerprintManagerCompat.CryptoObject createAuthenticationCryptoObject(String keyName);
+    FingerprintManager.CryptoObject createAuthenticationCryptoObject(String keyName);
 
     /**
      * Create CryptoObject for encryption call. Return null if invalid.
      */
     @Nullable
-    FingerprintManagerCompat.CryptoObject createEncryptionCryptoObject(String keyName);
+    FingerprintManager.CryptoObject createEncryptionCryptoObject(String keyName);
 
     /**
      * Create CryptoObject for decryption call. Return null if invalid.
      */
     @Nullable
-    FingerprintManagerCompat.CryptoObject createDecryptionCryptoObject(String keyName);
+    FingerprintManager.CryptoObject createDecryptionCryptoObject(String keyName);
 
     @RequiresApi(Build.VERSION_CODES.M)
     class Default implements CryptoFactory {
@@ -69,19 +69,19 @@ public interface CryptoFactory {
 
         @Nullable
         @Override
-        public FingerprintManagerCompat.CryptoObject createAuthenticationCryptoObject(String keyName) {
+        public FingerprintManager.CryptoObject createAuthenticationCryptoObject(String keyName) {
             return createCryptoObject(keyName, Mode.AUTHENTICATION);
         }
 
         @Nullable
         @Override
-        public FingerprintManagerCompat.CryptoObject createDecryptionCryptoObject(String keyName) {
+        public FingerprintManager.CryptoObject createDecryptionCryptoObject(String keyName) {
             return createCryptoObject(keyName, Mode.DECRYPTION);
         }
 
         @Nullable
         @Override
-        public FingerprintManagerCompat.CryptoObject createEncryptionCryptoObject(String keyName) {
+        public FingerprintManager.CryptoObject createEncryptionCryptoObject(String keyName) {
             return createCryptoObject(keyName, Mode.ENCRYPTION);
         }
 
@@ -102,7 +102,7 @@ public interface CryptoFactory {
             return cipher;
         }
 
-        private FingerprintManagerCompat.CryptoObject createCryptoObject(String keyName, Mode mode) {
+        private FingerprintManager.CryptoObject createCryptoObject(String keyName, Mode mode) {
             if (keyStore == null || keyGenerator == null) {
                 return null;
             }
@@ -110,7 +110,7 @@ public interface CryptoFactory {
             try {
                 Key key = (mode == Mode.DECRYPTION) ? loadKey(keyName) : createKey(keyName);
                 Cipher cipher = createCipher(keyName, mode, key);
-                return new FingerprintManagerCompat.CryptoObject(cipher);
+                return new FingerprintManager.CryptoObject(cipher);
             } catch (Exception e) {
                 FingerprintCompat.e(e.toString());
                 return null;
