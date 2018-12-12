@@ -13,6 +13,8 @@ import com.d.lib.fingerprintcompat.crypto.Crypto;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
 public class CancellableAuthenticationCallback<T> extends FingerprintManagerCompat.AuthenticationCallback {
+    public static final int FINGERPRINT_NOT_RECOGNIZED = -1;
+
     protected final Mode mMode;
     protected final Crypto mCrypto;
     protected final String mValue;

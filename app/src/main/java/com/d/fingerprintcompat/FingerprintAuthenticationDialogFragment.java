@@ -69,6 +69,12 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
         super.onResume();
         mIcon.setImageResource(R.drawable.ic_fingerprint);
         mFingerprintCompat.authenticate(new IFingerprint.Callback() {
+
+            @Override
+            public void onHelp(int helpMsgId, CharSequence helpString) {
+                showHelp(helpString);
+            }
+
             @Override
             public void onSuccess(String value) {
                 showSuccess();
@@ -96,6 +102,14 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
 
     private void showError(CharSequence error) {
         mIcon.setImageResource(R.drawable.ic_fingerprint_error);
+        mTips.setText(error);
+        mTips.setTextColor(ContextCompat.getColor(mContext, R.color.color_error));
+        mTips.removeCallbacks(mResetErrorTextRunnable);
+        mTips.postDelayed(mResetErrorTextRunnable, ERROR_TIMEOUT_MILLIS);
+    }
+
+    private void showHelp(CharSequence error) {
+        mIcon.setImageResource(R.drawable.ic_fingerprint_warning);
         mTips.setText(error);
         mTips.setTextColor(ContextCompat.getColor(mContext, R.color.color_warning));
         mTips.removeCallbacks(mResetErrorTextRunnable);

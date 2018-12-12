@@ -18,9 +18,12 @@ public class WrapAuthenticationCallback extends CancellableAuthenticationCallbac
 
     @Override
     public void onAuthenticationError(int errMsgId, CharSequence errString) {
+        FingerprintCompat.d("onAuthenticationError-->");
         if (!shouldReactToError(errMsgId)) {
             return;
         }
+        FingerprintCompat.d("<--onAuthenticationError");
+        FingerprintCompat.e("Error " + errMsgId + " : " + errString);
         if (mCallback != null) {
             mCallback.onAuthenticationError(errMsgId, errString);
         }
@@ -28,9 +31,12 @@ public class WrapAuthenticationCallback extends CancellableAuthenticationCallbac
 
     @Override
     public void onAuthenticationHelp(int helpMsgId, CharSequence helpString) {
+        FingerprintCompat.d("onAuthenticationHelp-->");
         if (mCancellationSignal.isCanceled()) {
             return;
         }
+        FingerprintCompat.d("<--onAuthenticationHelp");
+        FingerprintCompat.d("Help " + helpMsgId + " : " + helpString);
         if (mCallback != null) {
             mCallback.onAuthenticationHelp(helpMsgId, helpString);
         }
@@ -38,10 +44,11 @@ public class WrapAuthenticationCallback extends CancellableAuthenticationCallbac
 
     @Override
     public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
+        FingerprintCompat.d("onAuthenticationSucceeded-->");
         if (mCancellationSignal.isCanceled()) {
             return;
         }
-        FingerprintCompat.d("Successful authentication");
+        FingerprintCompat.d("<--Successful authentication");
         if (mCallback != null) {
             mCallback.onAuthenticationSucceeded(result);
         }
@@ -49,9 +56,13 @@ public class WrapAuthenticationCallback extends CancellableAuthenticationCallbac
 
     @Override
     public void onAuthenticationFailed() {
+        FingerprintCompat.d("onAuthenticationFailed-->");
         if (mCancellationSignal.isCanceled()) {
             return;
         }
+        FingerprintCompat.d("<--Failed authentication");
+        FingerprintCompat.e("Error " + FINGERPRINT_NOT_RECOGNIZED
+                + " : " + "Fingerprint not recognized. Try again.");
         if (mCallback != null) {
             mCallback.onAuthenticationFailed();
         }

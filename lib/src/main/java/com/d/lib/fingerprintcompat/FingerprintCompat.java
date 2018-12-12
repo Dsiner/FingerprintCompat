@@ -28,7 +28,7 @@ import com.d.lib.fingerprintcompat.crypto.CryptoFactory;
  **/
 public class FingerprintCompat implements IFingerprint {
     public final static String TAG = "FingerprintCompat";
-    private static boolean DEBUG = true;
+    private static boolean DEBUG = false;
 
     private static final String KEY_AUTH_MODE = "<FingerprintCompat authentication mode>";
 
@@ -270,7 +270,7 @@ public class FingerprintCompat implements IFingerprint {
         Log.e(TAG, message);
     }
 
-    private static void setDebug(boolean debug) {
+    public static void setDebug(boolean debug) {
         DEBUG = debug;
     }
 

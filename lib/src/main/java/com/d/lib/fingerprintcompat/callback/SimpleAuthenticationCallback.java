@@ -21,26 +21,34 @@ public class SimpleAuthenticationCallback extends CancellableAuthenticationCallb
 
     @Override
     public void onAuthenticationError(int errMsgId, CharSequence errString) {
+        FingerprintCompat.d("onAuthenticationError-->");
         if (!shouldReactToError(errMsgId)) {
             return;
         }
+        FingerprintCompat.d("<--onAuthenticationError");
         onError(errMsgId, errString);
     }
 
     @Override
     public void onAuthenticationHelp(int helpMsgId, CharSequence helpString) {
+        FingerprintCompat.d("onAuthenticationHelp-->");
         if (mCancellationSignal.isCanceled()) {
             return;
         }
-        onError(helpMsgId, helpString);
+        FingerprintCompat.d("<--onAuthenticationHelp");
+        FingerprintCompat.d("Help " + helpMsgId + " : " + helpString);
+        if (mCallback != null) {
+            mCallback.onHelp(helpMsgId, helpString);
+        }
     }
 
     @Override
     public void onAuthenticationSucceeded(FingerprintManagerCompat.AuthenticationResult result) {
+        FingerprintCompat.d("onAuthenticationSucceeded-->");
         if (mCancellationSignal.isCanceled()) {
             return;
         }
-        FingerprintCompat.d("Successful authentication");
+        FingerprintCompat.d("<--Successful authentication");
         if (mMode == Mode.AUTHENTICATION) {
             if (mCallback != null) {
                 mCallback.onSuccess("");
@@ -52,9 +60,12 @@ public class SimpleAuthenticationCallback extends CancellableAuthenticationCallb
 
     @Override
     public void onAuthenticationFailed() {
-        if (!mCancellationSignal.isCanceled()) {
-            onError(-1, "Fingerprint not recognized. Try again.");
+        FingerprintCompat.d("onAuthenticationFailed-->");
+        if (mCancellationSignal.isCanceled()) {
+            return;
         }
+        FingerprintCompat.d("<--Failed authentication");
+        onError(FINGERPRINT_NOT_RECOGNIZED, "Fingerprint not recognized. Try again.");
     }
 
     private void cipherValue(FingerprintManagerCompat.CryptoObject cryptoObject, String value) {
@@ -74,13 +85,13 @@ public class SimpleAuthenticationCallback extends CancellableAuthenticationCallb
                 mCallback.onSuccess(cipheredValue);
             }
         } else {
-            String error = (mMode == Mode.DECRYPTION) ? "decryption failed" : "encryption failed";
-            onError(-1, error);
+            String error = (mMode == Mode.DECRYPTION) ? "Decryption failed" : "Encryption failed";
+            onError(FINGERPRINT_NOT_RECOGNIZED, error);
         }
     }
 
     private void onError(int error, CharSequence errString) {
-        FingerprintCompat.e("Error " + error);
+        FingerprintCompat.e("Error " + error + " : " + errString);
         if (mCallback != null) {
             mCallback.onError(new FingerprintException(error, errString));
         }

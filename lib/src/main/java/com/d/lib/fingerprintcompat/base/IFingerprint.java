@@ -69,6 +69,10 @@ public interface IFingerprint {
 
         }
 
+        public void onHelp(int helpMsgId, CharSequence helpString) {
+
+        }
+
         /**
          * User successfully authenticated.
          *
