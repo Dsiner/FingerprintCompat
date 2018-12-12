@@ -3,6 +3,7 @@ package com.d.fingerprintcompat;
 import android.annotation.TargetApi;
 import android.app.DialogFragment;
 import android.content.Context;
+import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -72,7 +73,9 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
 
             @Override
             public void onHelp(int helpMsgId, CharSequence helpString) {
-                showHelp(helpString);
+                if (helpMsgId == FingerprintManager.FINGERPRINT_ACQUIRED_TOO_FAST) {
+                    showHelp(helpString);
+                }
             }
 
             @Override
@@ -108,9 +111,9 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
         mTips.postDelayed(mResetErrorTextRunnable, ERROR_TIMEOUT_MILLIS);
     }
 
-    private void showHelp(CharSequence error) {
+    private void showHelp(CharSequence help) {
         mIcon.setImageResource(R.drawable.ic_fingerprint_warning);
-        mTips.setText(error);
+        mTips.setText(help);
         mTips.setTextColor(ContextCompat.getColor(mContext, R.color.color_warning));
         mTips.removeCallbacks(mResetErrorTextRunnable);
         mTips.postDelayed(mResetErrorTextRunnable, ERROR_TIMEOUT_MILLIS);
