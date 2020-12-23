@@ -8,7 +8,7 @@ import com.d.lib.fingerprintcompat.base.FingerprintManagerCompat;
 import com.d.lib.fingerprintcompat.base.Mode;
 
 class CryptoObjectInitRunnable implements Runnable {
-    private final static Handler mMainHandler = new Handler(Looper.getMainLooper());
+    private static final Handler mMainHandler = new Handler(Looper.getMainLooper());
 
     private final Mode mMode;
     private final CryptoFactory mCryptoFactory;

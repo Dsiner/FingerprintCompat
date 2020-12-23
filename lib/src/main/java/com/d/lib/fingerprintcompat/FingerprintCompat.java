@@ -27,7 +27,7 @@ import com.d.lib.fingerprintcompat.crypto.CryptoFactory;
  * Created by D on 2018/11/2.
  **/
 public class FingerprintCompat implements IFingerprint {
-    public final static String TAG = "FingerprintCompat";
+    public static final String TAG = "FingerprintCompat";
     private static boolean DEBUG = false;
 
     private static final String KEY_AUTH_MODE = "<FingerprintCompat authentication mode>";

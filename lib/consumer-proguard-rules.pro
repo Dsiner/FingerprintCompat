@@ -1,0 +1,2 @@
+-keep class com.d.lib.fingerprintcompat.** {*;}
+-keep interface com.d.lib.fingerprintcompat.** {*;}
