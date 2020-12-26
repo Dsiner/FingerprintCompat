@@ -28,10 +28,8 @@ import com.d.lib.fingerprintcompat.crypto.CryptoFactory;
  **/
 public class FingerprintCompat implements IFingerprint {
     public static final String TAG = "FingerprintCompat";
-    private static boolean DEBUG = false;
-
     private static final String KEY_AUTH_MODE = "<FingerprintCompat authentication mode>";
-
+    private static boolean DEBUG = false;
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
 
     private Context mContext;
@@ -40,10 +38,6 @@ public class FingerprintCompat implements IFingerprint {
     private Crypto mCrypto;
     private AsyncCryptoFactory.Callback mAsyncCryptoFactoryCallback;
     private CancellableAuthenticationCallback mCancellableAuthenticationCallback;
-
-    public static FingerprintCompat create(Context context) {
-        return new Builder(context).build();
-    }
 
     FingerprintCompat(Context context) {
         this.mContext = context;
@@ -54,6 +48,109 @@ public class FingerprintCompat implements IFingerprint {
         this.mAsyncCryptoFactory = asyncCryptoFactory;
         this.mCrypto = crypto;
         this.mFingerprintManagerCompat = FingerprintManagerCompat.from(context);
+    }
+
+    public static FingerprintCompat create(Context context) {
+        return new Builder(context).build();
+    }
+
+    public static boolean enable(Context context) {
+        if (!isHardwareDetected(context)) {
+            Toast.makeText(context.getApplicationContext(),
+                    "Fingerprint hardware is not present and functional",
+                    Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        if (!isKeyguardSecure(context)) {
+            // Show a message that the user hasn't set up a fingerprint or lock screen.
+            Toast.makeText(context.getApplicationContext(),
+                    "Secure lock screen hasn't set up.\n"
+                            + "Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint",
+                    Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        if (!hasEnrolledFingerprints(context)) {
+            // This happens when no fingerprints are registered.
+            Toast.makeText(context.getApplicationContext(),
+                    "Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint",
+                    Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param context Context
+     * @return if false Show a message that the user hasn't set up a fingerprint or lock screen.
+     * Secure lock screen hasn't set up. Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint
+     */
+    public static boolean isKeyguardSecure(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
+        KeyguardManager keyguardManager = context.getSystemService(KeyguardManager.class);
+        return keyguardManager != null
+                && keyguardManager.isKeyguardSecure();
+    }
+
+    public static boolean isHardwareDetected(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
+        // The line below prevents the false positive inspection from Android Studio
+        // noinspection ResourceType
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected();
+    }
+
+    /**
+     * Now the protection level of USE_FINGERPRINT permission is normal instead of dangerous.
+     * See http://developer.android.com/reference/android/Manifest.permission.html#USE_FINGERPRINT
+     * The line below prevents the false positive inspection from Android Studio
+     * noinspection ResourceType
+     *
+     * @param context Context
+     * @return false This happens when no fingerprints are registered.
+     * Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint.
+     */
+    public static boolean hasEnrolledFingerprints(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.hasEnrolledFingerprints();
+    }
+
+    public static boolean isFingerprintAuthAvailable(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
+        // The line below prevents the false positive inspection from Android Studio
+        // noinspection ResourceType
+        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
+        return fingerprintManagerCompat.isHardwareDetected()
+                && fingerprintManagerCompat.hasEnrolledFingerprints()
+                && isKeyguardSecure(context);
+    }
+
+    public static void d(String message) {
+        if (!DEBUG) {
+            return;
+        }
+        Log.d(TAG, message);
+    }
+
+    public static void e(String message) {
+        if (!DEBUG) {
+            return;
+        }
+        Log.e(TAG, message);
+    }
+
+    public static void setDebug(boolean debug) {
+        DEBUG = debug;
     }
 
     @Override
@@ -173,105 +270,6 @@ public class FingerprintCompat implements IFingerprint {
                 mCancellableAuthenticationCallback.getCancellationSignal(),
                 mCancellableAuthenticationCallback,
                 mMainHandler);
-    }
-
-    public static boolean enable(Context context) {
-        if (!isHardwareDetected(context)) {
-            Toast.makeText(context.getApplicationContext(),
-                    "Fingerprint hardware is not present and functional",
-                    Toast.LENGTH_SHORT).show();
-            return false;
-        }
-
-        if (!isKeyguardSecure(context)) {
-            // Show a message that the user hasn't set up a fingerprint or lock screen.
-            Toast.makeText(context.getApplicationContext(),
-                    "Secure lock screen hasn't set up.\n"
-                            + "Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint",
-                    Toast.LENGTH_SHORT).show();
-            return false;
-        }
-
-        if (!hasEnrolledFingerprints(context)) {
-            // This happens when no fingerprints are registered.
-            Toast.makeText(context.getApplicationContext(),
-                    "Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint",
-                    Toast.LENGTH_SHORT).show();
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * @param context Context
-     * @return if false Show a message that the user hasn't set up a fingerprint or lock screen.
-     * Secure lock screen hasn't set up. Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint
-     */
-    public static boolean isKeyguardSecure(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return false;
-        }
-        KeyguardManager keyguardManager = context.getSystemService(KeyguardManager.class);
-        return keyguardManager != null
-                && keyguardManager.isKeyguardSecure();
-    }
-
-    public static boolean isHardwareDetected(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return false;
-        }
-        // The line below prevents the false positive inspection from Android Studio
-        // noinspection ResourceType
-        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
-        return fingerprintManagerCompat.isHardwareDetected();
-    }
-
-    /**
-     * Now the protection level of USE_FINGERPRINT permission is normal instead of dangerous.
-     * See http://developer.android.com/reference/android/Manifest.permission.html#USE_FINGERPRINT
-     * The line below prevents the false positive inspection from Android Studio
-     * noinspection ResourceType
-     *
-     * @param context Context
-     * @return false This happens when no fingerprints are registered.
-     * Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint.
-     */
-    public static boolean hasEnrolledFingerprints(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return false;
-        }
-        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
-        return fingerprintManagerCompat.hasEnrolledFingerprints();
-    }
-
-    public static boolean isFingerprintAuthAvailable(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return false;
-        }
-        // The line below prevents the false positive inspection from Android Studio
-        // noinspection ResourceType
-        FingerprintManagerCompat fingerprintManagerCompat = FingerprintManagerCompat.from(context);
-        return fingerprintManagerCompat.isHardwareDetected()
-                && fingerprintManagerCompat.hasEnrolledFingerprints()
-                && isKeyguardSecure(context);
-    }
-
-    public static void d(String message) {
-        if (!DEBUG) {
-            return;
-        }
-        Log.d(TAG, message);
-    }
-
-    public static void e(String message) {
-        if (!DEBUG) {
-            return;
-        }
-        Log.e(TAG, message);
-    }
-
-    public static void setDebug(boolean debug) {
-        DEBUG = debug;
     }
 
     /**

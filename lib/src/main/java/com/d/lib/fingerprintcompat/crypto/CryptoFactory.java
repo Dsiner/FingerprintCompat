@@ -52,10 +52,9 @@ public interface CryptoFactory {
 
         private static final String KEY_KEYSTORE = "AndroidKeyStore";
         private static final String KEY_SHARED_PREFS = "<FingerprintCompat IV>";
-
+        private final SharedPreferences sharedPrefs;
         private KeyGenerator keyGenerator;
         private KeyStore keyStore;
-        private final SharedPreferences sharedPrefs;
 
         public Default(Context context) {
             this.sharedPrefs = context.getSharedPreferences(KEY_SHARED_PREFS, Context.MODE_PRIVATE);

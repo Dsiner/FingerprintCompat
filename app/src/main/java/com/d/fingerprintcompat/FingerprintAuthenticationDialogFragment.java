@@ -29,6 +29,14 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
     private ImageView mIcon;
     private TextView mTips;
     private FingerprintCompat mFingerprintCompat;
+    private Runnable mResetErrorTextRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mTips.setTextColor(ContextCompat.getColor(mContext, R.color.color_hint));
+            mTips.setText(mTips.getResources().getString(R.string.fingerprint_hint));
+            mIcon.setImageResource(R.drawable.ic_fingerprint);
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -118,13 +126,4 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment {
         mTips.removeCallbacks(mResetErrorTextRunnable);
         mTips.postDelayed(mResetErrorTextRunnable, ERROR_TIMEOUT_MILLIS);
     }
-
-    private Runnable mResetErrorTextRunnable = new Runnable() {
-        @Override
-        public void run() {
-            mTips.setTextColor(ContextCompat.getColor(mContext, R.color.color_hint));
-            mTips.setText(mTips.getResources().getString(R.string.fingerprint_hint));
-            mIcon.setImageResource(R.drawable.ic_fingerprint);
-        }
-    };
 }

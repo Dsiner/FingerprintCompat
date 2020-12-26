@@ -31,9 +31,9 @@ public class AsyncCryptoFactory {
 
     public static abstract class Callback {
 
-        public abstract void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject);
-
         private boolean canceled = false;
+
+        public abstract void onCryptoObjectCreated(@Nullable FingerprintManagerCompat.CryptoObject cryptoObject);
 
         public void cancel() {
             canceled = true;

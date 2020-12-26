@@ -5,6 +5,20 @@
 
 > FingerprintCompat is a library for using registered fingerprints to authenticate the user in your app.
 
+## Set up
+Maven:
+```xml
+<dependency>
+  <groupId>com.dsiner.lib</groupId>
+  <artifactId>fingerprintcompat</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+or Gradle:
+```groovy
+implementation 'com.dsiner.lib:fingerprintcompat:1.0.0'
+```
+
 ## Screenshots
 
 <p>
